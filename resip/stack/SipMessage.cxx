@@ -277,23 +277,11 @@ SipMessage::init(const SipMessage& rhs)
 
    if (rhs.mSecurityAttributes.get())
    {
-
       if (!mSecurityAttributes.get())
       {
-         SecurityAttributes* attr = new SecurityAttributes();
+         SecurityAttributes* attr = new SecurityAttributes(*rhs.mSecurityAttributes);
          mSecurityAttributes.reset(attr);
       }
-
-      if (rhs.mSecurityAttributes->isEncrypted())
-      {
-         mSecurityAttributes->setEncrypted();
-      }
-      mSecurityAttributes->setSignatureStatus(rhs.mSecurityAttributes->getSignatureStatus());
-      mSecurityAttributes->setIdentity(rhs.mSecurityAttributes->getIdentity());
-      mSecurityAttributes->setIdentityStrength(rhs.mSecurityAttributes->getIdentityStrength());
-      mSecurityAttributes->setSigner(rhs.mSecurityAttributes->getSigner());
-      mSecurityAttributes->setOutgoingEncryptionLevel(rhs.mSecurityAttributes->getOutgoingEncryptionLevel());
-      mSecurityAttributes->setEncryptionPerformed(rhs.mSecurityAttributes->encryptionPerformed());
    }
    else
    {
