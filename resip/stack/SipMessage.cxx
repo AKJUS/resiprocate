@@ -1514,7 +1514,7 @@ defineHeader(SIPETag, "SIP-ETag", Token, "RFC 3903");
 defineHeader(SIPIfMatch, "SIP-If-Match", Token, "RFC 3903");
 defineHeader(ContentId, "Content-ID", Token, "RFC 2045");
 defineMultiHeader(AllowEvents, "Allow-Events", Token, "RFC 3265");
-defineMultiHeader(Identity, "Identity", StringCategory, "RFC 8224");   // Originally defined in RFC 4474 as a single header, but later modified by RFC8224 to be a multiheader
+defineMultiHeader(Identity, "Identity", IdentityCategory, "RFC 8224");   // Originally defined in RFC 4474 as a single header, but later modified by RFC8224 to be a multiheader
 defineMultiHeader(AcceptEncoding, "Accept-Encoding", Token, "RFC 3261");
 defineMultiHeader(AcceptLanguage, "Accept-Language", Token, "RFC 3261");
 defineMultiHeader(Allow, "Allow", Token, "RFC 3261");
