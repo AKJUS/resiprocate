@@ -36,6 +36,8 @@ public:
 
    bool isValid() { return mIsValid; }
    bool hasMagicCookie();
+   const StunTuple& getLocalTuple() const { return mLocalTuple; }
+   const StunTuple& getRemoteTuple() const { return mRemoteTuple; }
 
    unsigned int stunEncodeMessage(char* buf, unsigned int bufLen);
    unsigned int stunEncodeFramedMessage(char* buf, unsigned int bufLen);  // Used for TURN-05 framing only
@@ -395,6 +397,7 @@ EncodeStream& operator<< ( EncodeStream& strm, const StunMessage::StunMsgHdr& );
 
 /* ====================================================================
 
+ Copyright (c) 2026 SIP Spectrum, Inc. https://www.sipspectrum.com
  Copyright (c) 2007-2008, Plantronics, Inc.
  All rights reserved.
 
