@@ -341,7 +341,7 @@ FdPollImplFdSet::waitAndProcess(int ms)
       int err = getErrno();
       if ( err!=EINTR )
       {
-         CritLog(<<"select() failed: "<<strerror(err));
+         CritLog(<<"select() failed: " <<strError(err));
          resip_assert(0);     // .kw. not sure correct behavior...
       }
       return false;
@@ -742,7 +742,7 @@ FdPollImplPoll::waitAndProcess(int ms)
       int err = getErrno();
       if ( err != EINTR )
       {
-         CritLog(<<"poll() failed: " << err << " " << strerror(err));
+         CritLog(<<"poll() failed: " << err << " " << strError(err));
          resip_assert(0);     // .kw. not sure correct behavior...
       }
       return false;
@@ -796,7 +796,7 @@ FdPollImplPoll::waitAndProcess(int ms)
          int err = getErrno();
          if (err != EINTR)
          {
-            CritLog(<<"select() failed: "<<strerror(err));
+            CritLog(<<"select() failed: "<< strError(err));
             resip_assert(0);     // .kw. not sure correct behavior...
          }
       }

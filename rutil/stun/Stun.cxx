@@ -1058,7 +1058,7 @@ namespace resip
       toHex(hmac, 20, hmacHex);
       hmacHex[40] = 0;
 
-      strcat(buffer, hmacHex);
+      snprintf(buffer + expectedSize, bufferSize - expectedSize, "%s", hmacHex);
 
       int l = (int)strlen(buffer);
       resip_assert(l + 1 < STUN_MAX_STRING);
@@ -1198,7 +1198,7 @@ namespace resip
       in_addr sin_addr;
 
       char host[512];
-      strncpy(host, peerName, 512);
+      snprintf(host, sizeof(host), "%s", peerName);
       host[512 - 1] = '\0';
       char* port = NULL;
 
@@ -1233,64 +1233,43 @@ namespace resip
       if (portNum < 1024) return false;
       if (portNum >= 0xFFFF) return false;
 
-      // figure out the host part 
-      struct hostent* h;
-
+      // figure out the host part
 #ifdef WIN32
       resip_assert(strlen(host) >= 1);
       if (isdigit(static_cast<unsigned char>(host[0])))
       {
-         // assume it is a ip address 
-#if defined(_MSC_VER) && _MSC_VER >= 1800  /* removing compilation warning in VS2013+ */
+         // assume it is an ip address
          unsigned long a = 0;
          inet_pton(AF_INET, host, &a);
-#else
-         unsigned long a = inet_addr(host);
-#endif
-         //cerr << "a=0x" << hex << a << dec << endl;
-
          ip = ntohl(a);
       }
       else
+#endif
       {
-         // assume it is a host name 
-         h = gethostbyname(host);
+         // assume it is a host name - getaddrinfo replaces deprecated gethostbyname
+         // it is thread-safe and supports both IPv4 and IPv6
+         struct addrinfo hints = {};
+         struct addrinfo* res = NULL;
+         hints.ai_family = AF_INET;        // IPv4 only for now, matching original behaviour
+         hints.ai_socktype = SOCK_STREAM;
 
-         if (h == NULL)
+         int err = getaddrinfo(host, NULL, &hints, &res);
+         if (err != 0 || res == NULL)
          {
-            int err = getErrno();
-            std::cerr << "error was " << err << std::endl;
-            resip_assert(err != WSANOTINITIALISED);
-
+            std::cerr << "getaddrinfo error: " << gai_strerror(err) << std::endl;
+#ifdef WIN32
+            resip_assert(getErrno() != WSANOTINITIALISED);
+#endif
             ip = ntohl(0x7F000001L);
-
             return false;
          }
-         else
-         {
-            sin_addr = *(struct in_addr*)h->h_addr;
-            ip = ntohl(sin_addr.s_addr);
-         }
-      }
 
-#else
-      h = gethostbyname(host);
-      if (h == NULL)
-      {
-         int err = getErrno();
-         std::cerr << "error was " << err << std::endl;
-         ip = ntohl(0x7F000001L);
-         return false;
-      }
-      else
-      {
-         sin_addr = *(struct in_addr*)h->h_addr;
+         sin_addr = ((struct sockaddr_in*)res->ai_addr)->sin_addr;
          ip = ntohl(sin_addr.s_addr);
+         freeaddrinfo(res);
       }
-#endif
 
       portVal = portNum;
-
       return true;
    }
 
@@ -1317,8 +1296,7 @@ namespace resip
       response.hasErrorCode = true;
       response.errorCode.errorClass = cl;
       response.errorCode.number = number;
-      strncpy(response.errorCode.reason, msg, sizeof(response.errorCode.reason));
-      response.errorCode.reason[sizeof(response.errorCode.reason) - 1] = '\0';
+      snprintf(response.errorCode.reason, sizeof(response.errorCode.reason), "%s", msg);
       response.errorCode.sizeReason = (uint16_t)strlen(msg);
    }
 
@@ -1556,7 +1534,7 @@ namespace resip
                uint32_t source;
                resip_assert(sizeof(int) == sizeof(uint32_t));
 
-               sscanf(req.username.value, "%x", &source);
+               source = strtoul(req.username.value, nullptr, 16);
                resp->hasReflectedFrom = true;
                resp->reflectedFrom.ipv4.port = 0;
                resp->reflectedFrom.ipv4.addr = source;
@@ -1743,7 +1721,7 @@ namespace resip
       if (e < 0)
       {
          int err = getErrno();
-         if (verbose) clog << "Error on select: " << strerror(err) << endl;
+         if (verbose) clog << "Error on select: " << strError(err) << endl;
       }
       else if (e >= 0)
       {
@@ -2302,7 +2280,7 @@ namespace resip
             // error occured
             closeSocket(myFd1);
             closeSocket(myFd2);
-            cerr << "Error " << e << " " << strerror(e) << " in select" << endl;
+            cerr << "Error " << e << " " << strError(e) << " in select" << endl;
             return StunTypeFailure;
          }
          else if (err == 0)

@@ -23,6 +23,7 @@
 //#endif
 
 #include <cstring>
+#include <string>
 
 #ifndef WIN32
 #  include <netdb.h>
@@ -146,10 +147,10 @@ namespace resip
 
 #if defined(WIN32) || defined(__QNX__)
 #ifndef strcasecmp
-#  define strcasecmp(a,b)    stricmp(a,b)
+#  define strcasecmp(a,b)    _stricmp(a,b)
 #endif
 #ifndef strncasecmp
-#  define strncasecmp(a,b,c) strnicmp(a,b,c)
+#  define strncasecmp(a,b,c) _strnicmp(a,b,c)
 #endif
 #endif
 
@@ -235,6 +236,17 @@ hton64(const uint64_t input)
 }
 
 #endif
+
+inline std::string strError(int err)
+{
+   char buf[256];
+#ifdef _MSC_VER
+   strerror_s(buf, sizeof(buf), err);
+#else
+   strerror_r(err, buf, sizeof(buf));
+#endif
+   return buf;
+}
 
 }
 
