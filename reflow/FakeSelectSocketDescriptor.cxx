@@ -90,7 +90,7 @@ FakeSelectSocketDescriptor::receive()
    char rdBuf[1];
    if(::read(mPipe[0], rdBuf, 1) < 0)
    {
-      WarningLog(<< "read error: " << strError(errno));
+      WarningLog(<< "read error: " << resip::strError(errno));
    }
 #endif
 }
