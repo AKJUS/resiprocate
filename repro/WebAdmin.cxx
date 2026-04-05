@@ -2067,43 +2067,42 @@ void
 WebAdmin::buildRestartSubPage(DataStream& s)
 {
    unsigned short port = mProxy.getConfig().getConfigUnsignedShort("CommandPort", 0);
-   if(port != 0)
+   if (port != 0)
    {
-      // Send restart command to command server - it is not safe to invoke a restart from here
-      // since the webadmin thread and server is destroyed on the blocking ReproRunner::restart call
       int sd = 0, rc;
-      struct sockaddr_in localAddr, servAddr;
-      struct hostent *h;
       const char* host = "127.0.0.1";
-      h = gethostbyname(host);
-      if(h!=0) 
+
+      struct addrinfo hints = {};
+      struct addrinfo* res = nullptr;
+      hints.ai_family = AF_INET;
+      hints.ai_socktype = SOCK_STREAM;
+
+      if (getaddrinfo(host, nullptr, &hints, &res) == 0 && res != nullptr)
       {
-         servAddr.sin_family = h->h_addrtype;
-         if(h->h_length <= (int)sizeof(servAddr.sin_addr.s_addr))
-         {
-            memcpy((char *) &servAddr.sin_addr.s_addr, h->h_addr_list[0], h->h_length);
-            servAddr.sin_port = htons(port);
-  
-            // Create TCP Socket
-            sd = (int)socket(AF_INET, SOCK_STREAM, 0);
-         }
-         if(sd >= 0) 
+         struct sockaddr_in servAddr = {};
+         memcpy(&servAddr, res->ai_addr, res->ai_addrlen);
+         servAddr.sin_port = htons(port);
+         freeaddrinfo(res);
+
+         // Create TCP Socket
+         sd = (int)socket(AF_INET, SOCK_STREAM, 0);
+         if (sd >= 0)
          {
             // bind to any local interface/port
+            struct sockaddr_in localAddr = {};
             localAddr.sin_family = AF_INET;
             localAddr.sin_addr.s_addr = htonl(INADDR_ANY);
             localAddr.sin_port = 0;
-
-            rc = ::bind(sd, (struct sockaddr *) &localAddr, sizeof(localAddr));
-            if(rc >= 0) 
+            rc = ::bind(sd, (struct sockaddr*)&localAddr, sizeof(localAddr));
+            if (rc >= 0)
             {
                // Connect to server
-               rc = ::connect(sd, (struct sockaddr *) &servAddr, sizeof(servAddr));
-               if(rc >= 0) 
+               rc = ::connect(sd, (struct sockaddr*)&servAddr, sizeof(servAddr));
+               if (rc >= 0)
                {
                   Data request("<Restart>\r\n  <Request>\r\b  </Request>\r\n</Restart>\r\n");
                   rc = send(sd, request.c_str(), (int)request.size(), 0);
-                  if(rc >= 0)
+                  if (rc >= 0)
                   {
                      s << "Restarting proxy..." << endl;
                      closeSocket(sd);

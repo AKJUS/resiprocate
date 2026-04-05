@@ -1926,7 +1926,7 @@ Helper::gruuUserPart(const Data& instanceId,
 
    int outlen = static_cast<int>(out_size);
    res = EVP_EncryptUpdate(pCipherCtx.get(), out.data(), &outlen,
-      reinterpret_cast<const unsigned char*>(token.data()), token.size());
+      reinterpret_cast<const unsigned char*>(token.data()), (int)token.size());
    if (res > 0)
    {
       resip_assert(static_cast<unsigned int>(outlen) <= out_size);
@@ -2001,7 +2001,7 @@ Helper::fromGruuUserPart(const Data& gruuUserPart,
    const std::size_t out_size = out.size();
    int outlen = static_cast<int>(out_size);
    res = EVP_DecryptUpdate(pCipherCtx.get(), out.data(), &outlen,
-      reinterpret_cast<const unsigned char*>(decoded.data()), decoded.size());
+      reinterpret_cast<const unsigned char*>(decoded.data()), (int)decoded.size());
    if (res > 0)
    {
       resip_assert(static_cast<unsigned int>(outlen) <= out_size);

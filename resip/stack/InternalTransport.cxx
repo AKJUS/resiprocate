@@ -102,14 +102,14 @@ InternalTransport::socket(TransportType type, IpVersion ipVer)
    if ( fd == INVALID_SOCKET )
    {
       int e = getErrno();
-      ErrLog (<< "Failed to create socket: " << strerror(e));
+      ErrLog (<< "Failed to create socket: " << strError(e));
       throw Transport::Exception("Can't create TcpBaseTransport", __FILE__,__LINE__);
    }
 #if defined(WIN32)
    if (!SetHandleInformation((HANDLE)fd, HANDLE_FLAG_INHERIT, 0)) 
    {
       int e = getErrno();
-      ErrLog(<< "Failed to set handle information: " << strerror(e));
+      ErrLog(<< "Failed to set handle information: " << strError(e));
       throw Transport::Exception("Failed SetHandleInformation", __FILE__, __LINE__);
    }
 #endif
@@ -122,7 +122,7 @@ InternalTransport::socket(TransportType type, IpVersion ipVer)
       if ( ::setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, &on, sizeof(on)) )
       {
           int e = getErrno();
-          InfoLog (<< "Couldn't set sockoptions IPV6_V6ONLY: " << strerror(e));
+          InfoLog (<< "Couldn't set sockoptions IPV6_V6ONLY: " << strError(e));
           error(e);
           throw Exception("Failed setsockopt", __FILE__,__LINE__);
       }

@@ -208,7 +208,7 @@ DnsUtil::getLocalDomainName()
          {
             int err = getErrno();
             CritLog(<< "Couldn't find domainname: " << strerror(err));
-            throw Exception(strerror(err), __FILE__,__LINE__);
+            throw Exception(strError(err), __FILE__,__LINE__);
          }
       }
       DebugLog (<< "Found local domain name " << buffer);

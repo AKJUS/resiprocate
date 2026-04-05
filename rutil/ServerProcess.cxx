@@ -261,8 +261,8 @@ ServerProcess::daemonize()
    if ((pid = fork()) < 0) 
    {
       // fork() failed
-      ErrLog(<<"fork() failed: "<<strerror(errno));
-      throw std::runtime_error(strerror(errno));
+      ErrLog(<<"fork() failed: "<<strError(errno));
+      throw std::runtime_error(strError(errno));
    }
    else if (pid != 0)
    {
@@ -271,8 +271,8 @@ ServerProcess::daemonize()
    }
    if(chdir("/") < 0)
    {
-      ErrLog(<<"chdir() failed: "<<strerror(errno));
-      throw std::runtime_error(strerror(errno));
+      ErrLog(<<"chdir() failed: "<<strError(errno));
+      throw std::runtime_error(strError(errno));
    }
    // Nothing should be writing to stdout/stderr after this
    close(STDIN_FILENO);

@@ -924,6 +924,10 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/config.h
 # Used to group targets together when CMake generates projects for IDEs
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
+if(MSVC)
+    add_compile_options(/W3 /sdl)
+endif()
+
 add_subdirectory(rutil)
 
 add_subdirectory(resip)
