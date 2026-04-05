@@ -109,7 +109,13 @@ int FlowManagerSipXSocket::read(char* buffer, int bufferLength,
 
     iRC = read(buffer, bufferLength, &receivedIp, &iReceivedPort) ;
     if (ipAddress)
-        ipAddress->s_addr = inet_addr(receivedIp) ;
+    {
+       if (inet_pton(AF_INET, receivedIp.data(), ipAddress) <= 0)
+       {
+          // Handle invalid IP string by zeroing the address
+          ipAddress->s_addr = INADDR_NONE;
+       }
+    }
 
     if (port)
         *port = iReceivedPort ;

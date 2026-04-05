@@ -242,10 +242,11 @@ inline std::string strError(int err)
    char buf[256];
 #ifdef _MSC_VER
    strerror_s(buf, sizeof(buf), err);
-#else
-   strerror_r(err, buf, sizeof(buf));
-#endif
    return buf;
+#else
+   char* res = strerror_r(err, buf, sizeof(buf));
+   return std::string(res);
+#endif
 }
 
 }
