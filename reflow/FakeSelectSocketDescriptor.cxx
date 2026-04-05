@@ -5,6 +5,7 @@
 #include <netinet/in.h>
 #endif
 
+#include <rutil/compat.hxx>
 #include <rutil/Log.hxx>
 #include <rutil/Logger.hxx>
 #include "rutil/ResipAssert.h"
