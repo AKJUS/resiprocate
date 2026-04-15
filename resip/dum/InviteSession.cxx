@@ -2812,8 +2812,15 @@ InviteSession::handleSessionTimerResponse(const SipMessage& msg)
 {
    resip_assert(msg.header(h_CSeq).method() == INVITE || msg.header(h_CSeq).method() == UPDATE || msg.header(h_CSeq).method() == OPTIONS);
 
+   bool isOptionsRequest = msg.header(h_CSeq).method() == OPTIONS;
+   if (isOptionsRequest && sessionTimerSupportedLocalAndPeer())
+   {
+      // Session timer is properly supported by both sides, don't let OPTIONS responses act as a refresh
+      return;
+   }
+
    // Allow Re-Invites and Updates to update the Peer P-Asserted-Identity
-   if (msg.exists(h_PAssertedIdentities))
+   if (!isOptionsRequest && msg.exists(h_PAssertedIdentities))
    {
        mPeerPAssertedIdentities = msg.header(h_PAssertedIdentities);
    }
@@ -2862,8 +2869,15 @@ InviteSession::handleSessionTimerRequest(SipMessage &response, const SipMessage&
 {
    resip_assert(request.header(h_CSeq).method() == INVITE || request.header(h_CSeq).method() == UPDATE || request.header(h_CSeq).method() == OPTIONS);
 
-   // Allow Re-Invites and Updates to update the Peer P-Asserted-Identity
-   if (request.exists(h_PAssertedIdentities))
+   bool isOptionsRequest = request.header(h_CSeq).method() == OPTIONS;
+   if (isOptionsRequest && sessionTimerSupportedLocalAndPeer())
+   {
+      // Session timer is properly supported by both sides, don't let OPTIONS requests act as a refresh
+      return;
+   }
+
+   // Allow Re-Invites and Updates (not Options) to update the Peer P-Asserted-Identity
+   if (!isOptionsRequest && request.exists(h_PAssertedIdentities))
    {
        mPeerPAssertedIdentities = request.header(h_PAssertedIdentities);
    }
@@ -2911,7 +2925,7 @@ InviteSession::handleSessionTimerRequest(SipMessage &response, const SipMessage&
                 response.header(h_Requires).push_back(SessionTimerToken);
             }
          }
-         if (request.header(h_CSeq).method() != OPTIONS)
+         if (!isOptionsRequest)
          {
             setSessionTimerHeaders(response);
          }
