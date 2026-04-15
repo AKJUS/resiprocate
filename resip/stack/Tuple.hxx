@@ -137,6 +137,7 @@ class Tuple
       socklen_t length() const; // of sockaddr
       bool isLoopback() const;
       bool isPrivateAddress() const;  // Return boolean based on definitions in RFC1918(v4) and RFC4193(v6)
+      bool isSpecialPurposeAddress() const; // Return boolean based on definitions in RFC6890
       
       ///  @brief Compares TransportType, the binary address, port, and
       /// address family of the Tuple.
