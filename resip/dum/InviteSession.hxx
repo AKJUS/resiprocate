@@ -377,6 +377,7 @@ class InviteSession : public DialogUsage
       Tokens mPeerAllowedEvents;
       Data   mPeerUserAgent;
       NameAddrs mPeerPAssertedIdentities;
+      bool mPeerSupportsSessionTimer;
 
       Event toEvent(const SipMessage& msg, const Contents* offeranswer);
       
