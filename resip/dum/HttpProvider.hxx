@@ -27,6 +27,7 @@ class HttpProvider
       
       //.dcm. tu param will become a postable
       virtual void get(const GenericUri& target, const Data& tid, TransactionUser& tu, TargetCommand::Target& commandTarget)=0;
+      virtual void get(const GenericUri& target, const Data& tid, const Data& userData, TransactionUser& tu, TargetCommand::Target& commandTarget) {}  // Not =0 for back compat
       virtual ~HttpProvider(){} //impl. singleton destructor pattern later
    private:
       static HttpProvider* mInstance;
@@ -47,6 +48,7 @@ class HttpProviderFactory
 /* ====================================================================
  * The Vovida Software License, Version 1.0 
  * 
+ * Copyright (c) 2026, SIP Spectrum, Inc. https://www.sipspectrum.com
  * Copyright (c) 2000 Vovida Networks, Inc.  All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
