@@ -9,6 +9,7 @@
 #include "repro/HttpBase.hxx"
 
 #include <map>
+#include <memory>
 
 namespace resip
 {
@@ -24,6 +25,7 @@ namespace repro
 class Store;
 class UserStore;
 class RouteStore;
+class RestAdmin;
 typedef std::map<resip::Data, resip::Data> Dictionary;
 class Proxy;
 
@@ -52,10 +54,15 @@ class WebAdmin : public HttpBase,
 
       // (Re)load the users.txt file
       void parseUserFile();
-      
+
+      // Used by RestAdmin to send a JSON response on a pending connection.
+      // statusCode is the HTTP status (e.g. 200, 400, 404, 500).
+      void setApiResponse(int pageNumber, int statusCode, const resip::Data& jsonBody);
+
    protected:
       friend class CommandServer;
-      virtual void buildPage( const resip::Data& uri, 
+      virtual void buildPage( const resip::Data& method,
+                              const resip::Data& uri, 
                               int pageNumber,
                               const resip::Data& user,
                               const resip::Data& password);
@@ -120,6 +127,12 @@ class WebAdmin : public HttpBase,
 
       resip::Data mUserFile;
       std::map<resip::Data,resip::Data> mUsers;
+
+      // REST API handler; constructed after other members are initialized.
+      // Given a unique_ptr so we can forward-declare RestAdmin.
+      std::unique_ptr<RestAdmin> mRestAdmin;
+
+      friend class RestAdmin;
 };
 
 
@@ -131,6 +144,7 @@ class WebAdmin : public HttpBase,
 /* ====================================================================
  * The Vovida Software License, Version 1.0 
  * 
+ * Copyright (c) 2026 SIP Spectrum, Inc. https://www.sipspectrum.com
  * Copyright (c) 2000 Vovida Networks, Inc.  All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without

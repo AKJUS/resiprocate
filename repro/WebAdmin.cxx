@@ -28,6 +28,7 @@
 #include "repro/HttpBase.hxx"
 #include "repro/HttpConnection.hxx"
 #include "repro/WebAdmin.hxx"
+#include "repro/RestAdmin.hxx"
 #include "repro/RouteStore.hxx"
 #include "repro/UserStore.hxx"
 #include "repro/FilterStore.hxx"
@@ -92,6 +93,9 @@ WebAdmin::WebAdmin(Proxy& proxy,
    mPageOutlinePre.replace("VERSION", VersionUtils::instance().releaseVersion().c_str());
 
    parseUserFile();
+
+   // Construct the REST API handler now that all members are initialized.
+   mRestAdmin.reset(new RestAdmin(*this));
 }
 
 /**
@@ -198,7 +202,8 @@ WebAdmin::parseUserFile()
 }
 
 void 
-WebAdmin::buildPage( const Data& uri,
+WebAdmin::buildPage( const Data& method,
+                     const Data& uri,
                      int pageNumber, 
                      const resip::Data& pUser,
                      const resip::Data& pPassword )
@@ -214,8 +219,13 @@ WebAdmin::buildPage( const Data& uri,
    
    DebugLog (<< "  got page name: " << pageName );
 
+   // Dispatch any URI starting with /api/v1 to the REST handler.
+   // Authentication still happens below; the REST handler is invoked only
+   // after the user has been authenticated (or challenges disabled).
+   bool isRestRequest = uri.prefix("/api/v1");
+
    // if this is not a valid page, redirect it
-   if (
+   if ( !isRestRequest &&
       ( pageName != Data("index.html") ) && 
       ( pageName != Data("input") ) && 
       ( pageName != Data("cert.cer") ) && 
@@ -352,6 +362,16 @@ WebAdmin::buildPage( const Data& uri,
          setPage( "User does not exist.", pageNumber,401 );
          return;         
       }
+   }
+
+   // If this is a REST API request, dispatch to the REST handler.
+   // The REST handler is responsible for parsing query parameters and
+   // generating a JSON response.
+   if ( isRestRequest )
+   {
+      resip_assert( mRestAdmin );
+      mRestAdmin->dispatch(method, uri, pageNumber, authenticatedUser);
+      return;
    }
       
    // parse any URI tags from form entry
@@ -2220,6 +2240,13 @@ WebAdmin::buildDefaultPage()
       s.flush();
    }
    return ret;
+}
+
+
+void
+WebAdmin::setApiResponse(int pageNumber, int statusCode, const Data& jsonBody)
+{
+   setPage(jsonBody, pageNumber, statusCode, Mime("application", "json"));
 }
 
 
