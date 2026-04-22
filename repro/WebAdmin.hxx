@@ -52,6 +52,8 @@ class WebAdmin : public HttpBase,
                resip::IpVersion version=resip::V4,
                const resip::Data& ipAddr = resip::Data::Empty);
 
+      virtual ~WebAdmin();
+
       // (Re)load the users.txt file
       void parseUserFile();
 

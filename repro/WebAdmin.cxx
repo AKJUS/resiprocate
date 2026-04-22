@@ -98,6 +98,14 @@ WebAdmin::WebAdmin(Proxy& proxy,
    mRestAdmin.reset(new RestAdmin(*this));
 }
 
+WebAdmin::~WebAdmin()
+{
+   // mRestAdmin is destroyed here. Defined out-of-line so that RestAdmin is
+   // a complete type at the point where unique_ptr invokes its deleter,
+   // which avoids the "invalid application of 'sizeof' to incomplete type"
+   // error from GCC's unique_ptr implementation.
+}
+
 /**
  * Load web admin users from a file.
  *

@@ -82,7 +82,6 @@ Data errorEnvelope(int code, const Data& message)
 }
 }
 
-
 RestAdmin::RestAdmin(WebAdmin& webAdmin)
    : mWebAdmin(webAdmin)
 {
@@ -91,7 +90,6 @@ RestAdmin::RestAdmin(WebAdmin& webAdmin)
 RestAdmin::~RestAdmin()
 {
 }
-
 
 void
 RestAdmin::parseRequest(const Data& uri,
@@ -178,7 +176,6 @@ RestAdmin::parseRequest(const Data& uri,
    }
 }
 
-
 void
 RestAdmin::sendJson(int pageNumber, int statusCode, const Data& json)
 {
@@ -209,7 +206,6 @@ RestAdmin::sendNotFound(int pageNumber)
    sendJson(pageNumber, 404, errorEnvelope(404, "Not found"));
 }
 
-
 Data
 RestAdmin::param(const ParamMap& q, const Data& key, const Data& defaultValue)
 {
@@ -226,7 +222,6 @@ RestAdmin::hasParam(const ParamMap& q, const Data& key)
 {
    return q.find(key) != q.end();
 }
-
 
 void
 RestAdmin::dispatch(const Data& method,
@@ -310,7 +305,6 @@ RestAdmin::dispatch(const Data& method,
       sendNotFound(pageNumber);
    }
 }
-
 
 // ---------------------------------------------------------------------------
 // Registrations
@@ -430,7 +424,6 @@ RestAdmin::handleRegistrations(const Data& method,
    sendMethodNotAllowed(pageNumber, method);
 }
 
-
 // ---------------------------------------------------------------------------
 // Publications
 // ---------------------------------------------------------------------------
@@ -494,7 +487,6 @@ RestAdmin::handlePublications(const Data& method,
    sendMethodNotAllowed(pageNumber, method);
 }
 
-
 // ---------------------------------------------------------------------------
 // Domains
 // ---------------------------------------------------------------------------
@@ -555,7 +547,6 @@ RestAdmin::handleDomains(const Data& method,
 
    sendMethodNotAllowed(pageNumber, method);
 }
-
 
 // ---------------------------------------------------------------------------
 // Users
@@ -734,7 +725,6 @@ RestAdmin::handleUsers(const Data& method,
    sendMethodNotAllowed(pageNumber, method);
 }
 
-
 // ---------------------------------------------------------------------------
 // ACLs
 // ---------------------------------------------------------------------------
@@ -817,7 +807,6 @@ RestAdmin::handleAcls(const Data& method,
 
    sendMethodNotAllowed(pageNumber, method);
 }
-
 
 // ---------------------------------------------------------------------------
 // Routes
@@ -941,7 +930,6 @@ RestAdmin::handleRoutes(const Data& method,
    sendMethodNotAllowed(pageNumber, method);
 }
 
-
 // ---------------------------------------------------------------------------
 // Filters (GET only)
 // ---------------------------------------------------------------------------
@@ -984,7 +972,6 @@ RestAdmin::handleFilters(const Data& method,
 
    sendMethodNotAllowed(pageNumber, method);
 }
-
 
 // ---------------------------------------------------------------------------
 // Settings / stats / congestion
@@ -1049,7 +1036,6 @@ RestAdmin::handleCongestion(const Data& method, int pageNumber)
    sendJson(pageNumber, 200, successEnvelope(json::String(buffer.c_str())));
 }
 
-
 // ---------------------------------------------------------------------------
 // Log level
 // ---------------------------------------------------------------------------
@@ -1100,7 +1086,6 @@ RestAdmin::handleLogLevel(const Data& method,
    sendMethodNotAllowed(pageNumber, method);
 }
 
-
 // ---------------------------------------------------------------------------
 // DNS cache
 // ---------------------------------------------------------------------------
@@ -1143,7 +1128,6 @@ RestAdmin::handleDnsCache(const Data& method,
 
    sendMethodNotAllowed(pageNumber, method);
 }
-
 
 // ---------------------------------------------------------------------------
 // Restart
@@ -1222,7 +1206,6 @@ RestAdmin::handleRestart(const Data& method, int pageNumber)
    obj["status"] = json::String("restarting");
    sendJson(pageNumber, 200, successEnvelope(obj));
 }
-
 
 // ---------------------------------------------------------------------------
 // Certs reload
