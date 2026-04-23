@@ -673,31 +673,54 @@ RestAdmin::handleUsers(const Data& method,
       }
 
       // Partial-update semantics: any field not supplied stays unchanged.
-      Data newName  = hasParam(query, "name")  ? param(query, "name")  : rec.name;
-      Data newEmail = hasParam(query, "email") ? param(query, "email") : rec.email;
+      // Note that the stored password hash is MD5(user:realm:password), so
+      // if the username or domain changes, the old hash is no longer valid
+      // for the new identity. In that case a new password is mandatory.
+      Data newUser   = hasParam(query, "user")   ? param(query, "user")   : rec.user;
+      Data newDomain = hasParam(query, "domain") ? param(query, "domain") : rec.domain;
+      Data newName   = hasParam(query, "name")   ? param(query, "name")   : rec.name;
+      Data newEmail  = hasParam(query, "email")  ? param(query, "email")  : rec.email;
+
+      // Realm tracks domain (matching how addUser is called elsewhere).
+      Data newRealm = newDomain;
+
+      bool identityChanged = (newUser != rec.user) || (newDomain != rec.domain);
+      bool passwordProvided = hasParam(query, "password") && !param(query, "password").empty();
+
+      if (identityChanged && !passwordProvided)
+      {
+         sendError(pageNumber, 400,
+                   "Changing user or domain requires a new password "
+                   "(the stored password hash is bound to user+realm)");
+         return;
+      }
 
       Data password;
       Data passwordHashAlt;
       bool applyA1HashToPassword;
-      if (hasParam(query, "password") && !param(query, "password").empty())
+      if (passwordProvided)
       {
          password = param(query, "password");
          applyA1HashToPassword = true;
       }
       else
       {
-         // keep existing hash
+         // Identity is unchanged and no new password supplied: keep existing hash.
          password = rec.passwordHash;
          passwordHashAlt = rec.passwordHashAlt;
          applyA1HashToPassword = false;
       }
 
-      if (userStore.updateUser(key, rec.user, rec.domain, rec.realm, password,
+      // updateUser handles a change of key internally (adds new, deletes old).
+      if (userStore.updateUser(key, newUser, newDomain, newRealm, password,
                                applyA1HashToPassword, newName, newEmail,
                                passwordHashAlt))
       {
-         // Reread and return
-         AbstractDb::UserRecord updated = userStore.getUserInfo(key);
+         // If identity changed, the record now lives under a different key.
+         UserStore::Key updatedKey = identityChanged
+                                     ? userStore.buildKey(newUser, newRealm)
+                                     : key;
+         AbstractDb::UserRecord updated = userStore.getUserInfo(updatedKey);
          json::Object obj = userToJson(updated);
          obj["id"] = json::String((updated.user + Data("@") + updated.domain).c_str());
          sendJson(pageNumber, 200, successEnvelope(obj));

@@ -779,7 +779,11 @@ WebAdmin::buildEditUserSubPage(DataStream& s)
       
       s << "<h2>Edit User</h2>" << endl <<
            "<p>Editing Record with key: " << key << "</p>" << endl <<
-           "<p>Note:  If the username is not modified and you leave the password field empty the users current password will not be reset.</p>" << endl;
+           "<p>Note: If you leave the password field empty, the user's current "
+           "password will not be reset. However, if you change the username or "
+           "domain, a new password is required (the stored password hash is "
+           "bound to user+realm, so renaming without a new password would "
+           "invalidate the account).</p>" << endl;
       
       s << 
          "<form id=\"editUserForm\" action=\"showUsers.html\"  method=\"get\" name=\"editUserForm\" enctype=\"application/x-www-form-urlencoded\">" << endl << 
@@ -886,22 +890,36 @@ WebAdmin::buildShowUsersSubPage(DataStream& s)
          Data name = mHttpParams["name"];
          Data email = mHttpParams["email"];
          bool applyA1HashToPassword = true;
-         
-         // if no password was specified, then leave current password untouched
-         if(password == "" && user == rec.user && realm == rec.realm) 
+
+         // The stored password hash is MD5(user:realm:password), so if the
+         // username or domain changes, the old hash is no longer valid for
+         // the new identity and a new password is required.
+         bool identityChanged = (user != rec.user) || (realm != rec.realm);
+         if (identityChanged && password.empty())
          {
-            password = rec.passwordHash;
-            passwordHashAlt = rec.passwordHashAlt;
-            applyA1HashToPassword = false;
-         }
-         // write out the updated record to the database now
-         if(mStore.mUserStore.updateUser(key, user, domain, realm, password, applyA1HashToPassword, name, email, passwordHashAlt))
-         {
-            s << "<p><em>Updated:</em> " << key << "</p>" << endl; 
+            s << "<p><em>Error</em> updating user: changing user or domain "
+                 "requires a new password (the stored password hash is bound "
+                 "to user+realm).</p>\n";
          }
          else
          {
-            s << "<p><em>Error</em> updating user: likely database error (check logs).</p>\n";
+            // if no password was specified (and identity is unchanged), leave
+            // the current password hash untouched.
+            if (password.empty() && !identityChanged)
+            {
+               password = rec.passwordHash;
+               passwordHashAlt = rec.passwordHashAlt;
+               applyA1HashToPassword = false;
+            }
+            // write out the updated record to the database now
+            if(mStore.mUserStore.updateUser(key, user, domain, realm, password, applyA1HashToPassword, name, email, passwordHashAlt))
+            {
+               s << "<p><em>Updated:</em> " << key << "</p>" << endl;
+            }
+            else
+            {
+               s << "<p><em>Error</em> updating user: likely database error (check logs).</p>\n";
+            }
          }
       }
    }
