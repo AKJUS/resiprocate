@@ -6,6 +6,7 @@
 #include "rutil/dns/DnsStub.hxx"
 #include "rutil/TransportType.hxx"
 #include "resip/stack/Tuple.hxx"
+#include "resip/stack/StatisticsMessage.hxx"
 #include "repro/HttpBase.hxx"
 
 #include <map>
@@ -56,6 +57,11 @@ class WebAdmin : public HttpBase,
 
       // (Re)load the users.txt file
       void parseUserFile();
+
+      // Called by ReproRunner (on the stack thread) when a StatisticsMessage
+      // is delivered. Populates the shared stats payload and signals any
+      // threads waiting in RestAdmin::handleStats for fresh data.
+      virtual void handleStatisticsMessage(resip::StatisticsMessage& statsMessage);
 
       // Used by RestAdmin to send a JSON response on a pending connection.
       // statusCode is the HTTP status (e.g. 200, 400, 404, 500).
@@ -108,6 +114,15 @@ class WebAdmin : public HttpBase,
       resip::Data mDnsCache;
       resip::Mutex mDnsCacheMutex;
       resip::Condition mDnsCacheCondition;
+
+      // Statistics manager results delivered asynchronously via
+      // handleStatisticsMessage. mStatsReady is set to true by that handler
+      // once mStatsPayload is filled in; RestAdmin::handleStats waits on the
+      // condition with a timeout.
+      resip::StatisticsMessage::Payload mStatsPayload;
+      bool mStatsReady;
+      resip::Mutex mStatsMutex;
+      resip::Condition mStatsCondition;
       
       bool mNoWebChallenges;
       

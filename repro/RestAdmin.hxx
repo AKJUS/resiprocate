@@ -49,6 +49,8 @@ class WebAdmin;
 //   GET    /api/v1/filters
 //   GET    /api/v1/settings
 //   GET    /api/v1/stackinfo
+//   GET    /api/v1/stats
+//   POST   /api/v1/stats/reset
 //   GET    /api/v1/congestion
 //   GET    /api/v1/loglevel
 //   PUT    /api/v1/loglevel?level=...
@@ -121,6 +123,9 @@ private:
                       int pageNumber);
    void handleSettings(const resip::Data& method, int pageNumber);
    void handleStackInfo(const resip::Data& method, int pageNumber);
+   void handleStats(const resip::Data& method,
+                    const std::vector<resip::Data>& path,
+                    int pageNumber);
    void handleCongestion(const resip::Data& method, int pageNumber);
    void handleLogLevel(const resip::Data& method,
                        const ParamMap& query,

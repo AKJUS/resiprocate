@@ -10,12 +10,14 @@
 
 #include "resip/dum/RegistrationPersistenceManager.hxx"
 #include "resip/dum/PublicationPersistenceManager.hxx"
+#include "resip/stack/StatisticsMessage.hxx"
 #include "resip/stack/Symbols.hxx"
 #include "resip/stack/Tuple.hxx"
 #include "resip/stack/SipStack.hxx"
 #include "resip/stack/GenericPidfContents.hxx"
 #include "rutil/Data.hxx"
 #include "rutil/DnsUtil.hxx"
+#include "rutil/Lock.hxx"
 #include "rutil/Logger.hxx"
 #include "rutil/DigestStream.hxx"
 #include "rutil/ParseBuffer.hxx"
@@ -87,7 +89,8 @@ WebAdmin::WebAdmin(Proxy& proxy,
    mPageOutlinePost(
 #include "repro/webadmin/pageOutlinePost.ixx"
    ),
-   mUserFile(proxy.getConfig().getConfigData("HttpAdminUserFile", "users.txt"))
+   mUserFile(proxy.getConfig().getConfigData("HttpAdminUserFile", "users.txt")),
+   mStatsReady(false)
 {
    // Place repro version into PageOutlinePre
    mPageOutlinePre.replace("VERSION", VersionUtils::instance().releaseVersion().c_str());
@@ -2273,6 +2276,22 @@ void
 WebAdmin::setApiResponse(int pageNumber, int statusCode, const Data& jsonBody)
 {
    setPage(jsonBody, pageNumber, statusCode, Mime("application", "json"));
+}
+
+void
+WebAdmin::handleStatisticsMessage(StatisticsMessage& statsMessage)
+{
+   // Called on the stack thread when a StatisticsMessage is delivered.
+   // Copy the payload struct under the lock and wake any RestAdmin::handleStats
+   // caller that is blocked waiting for fresh data. Serialization to JSON is
+   // deferred to the REST handler so that the stack thread isn't doing any
+   // more work here than necessary.
+   {
+      Lock lock(mStatsMutex); (void)lock;
+      statsMessage.loadOut(mStatsPayload);
+      mStatsReady = true;
+   }
+   mStatsCondition.notify_all();
 }
 
 

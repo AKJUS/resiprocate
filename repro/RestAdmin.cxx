@@ -4,6 +4,7 @@
   #include "config.h"
 #endif
 
+#include <chrono>
 #include <sstream>
 
 #include "cajun/json/elements.h"
@@ -80,7 +81,143 @@ Data errorEnvelope(int code, const Data& message)
    obj["error"] = err;
    return writeJson(obj);
 }
+
+// Small helper: turn an unsigned int into a JSON string key.
+// Used for maps keyed by SIP response codes (JSON object keys must be strings).
+std::string codeToKey(unsigned int code)
+{
+   std::ostringstream oss;
+   oss << code;
+   return oss.str();
 }
+
+// SIP method types tracked by the StatisticsMessage per-method arrays.
+// We enumerate them explicitly so we can map each array slot to a
+// human-readable name without depending on a Method<->String helper that
+// might not be available in all resip builds.
+struct MethodNameEntry
+{
+   resip::MethodTypes type;
+   const char*        name;
+};
+const MethodNameEntry kTrackedMethods[] =
+{
+   { resip::INVITE,    "INVITE"    },
+   { resip::ACK,       "ACK"       },
+   { resip::BYE,       "BYE"       },
+   { resip::CANCEL,    "CANCEL"    },
+   { resip::MESSAGE,   "MESSAGE"   },
+   { resip::OPTIONS,   "OPTIONS"   },
+   { resip::REGISTER,  "REGISTER"  },
+   { resip::PUBLISH,   "PUBLISH"   },
+   { resip::SUBSCRIBE, "SUBSCRIBE" },
+   { resip::NOTIFY,    "NOTIFY"    },
+   { resip::REFER,     "REFER"     },
+   { resip::INFO,      "INFO"      },
+   { resip::PRACK,     "PRACK"     },
+   { resip::SERVICE,   "SERVICE"   },
+   { resip::UPDATE,    "UPDATE"    },
+};
+const size_t kNumTrackedMethods = sizeof(kTrackedMethods) / sizeof(kTrackedMethods[0]);
+
+// Build a sparse JSON object from a responsesByCode-style array.
+// Only includes codes whose count is non-zero.
+json::Object responseCodeMap(const unsigned int* codeArr,
+                             unsigned int maxCode)
+{
+   json::Object obj;
+   for (unsigned int c = 0; c < maxCode; ++c)
+   {
+      if (codeArr[c] != 0)
+      {
+         obj[codeToKey(c)] = json::Number(codeArr[c]);
+      }
+   }
+   return obj;
+}
+
+// Build a sparse JSON object keyed by method name for a *ByMethod array.
+// Only includes methods whose count is non-zero.
+json::Object methodMap(const unsigned int* methodArr)
+{
+   json::Object obj;
+   for (size_t i = 0; i < kNumTrackedMethods; ++i)
+   {
+      unsigned int v = methodArr[kTrackedMethods[i].type];
+      if (v != 0)
+      {
+         obj[kTrackedMethods[i].name] = json::Number(v);
+      }
+   }
+   return obj;
+}
+
+// Build a nested sparse JSON object for a *ByMethodByCode 2-D array.
+// Outer keys are method names, inner keys are response codes.
+// Methods with no non-zero codes are omitted entirely.
+json::Object methodCodeMap(const unsigned int (*arr)[resip::StatisticsMessage::Payload::MaxCode])
+{
+   json::Object obj;
+   for (size_t i = 0; i < kNumTrackedMethods; ++i)
+   {
+      resip::MethodTypes m = kTrackedMethods[i].type;
+      json::Object inner = responseCodeMap(
+            arr[m], resip::StatisticsMessage::Payload::MaxCode);
+      // Only include the method if it has any non-zero codes.
+      if (!inner.Empty())
+      {
+         obj[kTrackedMethods[i].name] = inner;
+      }
+   }
+   return obj;
+}
+
+// Turn a StatisticsMessage::Payload into a json::Object with one entry per
+// counter / sparse sub-object per array. Only response codes and methods
+// that have non-zero counts are included, to keep payload size bounded.
+json::Object payloadToJson(const resip::StatisticsMessage::Payload& p)
+{
+   json::Object obj;
+
+   // --- Scalar counters (mirror exactly) ---
+   obj["tuFifoSize"]               = json::Number(p.tuFifoSize);
+   obj["transportFifoSizeSum"]     = json::Number(p.transportFifoSizeSum);
+   obj["transactionFifoSize"]      = json::Number(p.transactionFifoSize);
+   obj["activeTimers"]             = json::Number(p.activeTimers);
+   obj["openTcpConnections"]       = json::Number(p.openTcpConnections);
+   obj["activeClientTransactions"] = json::Number(p.activeClientTransactions);
+   obj["activeServerTransactions"] = json::Number(p.activeServerTransactions);
+   obj["pendingDnsQueries"]        = json::Number(p.pendingDnsQueries);
+
+   obj["requestsSent"]             = json::Number(p.requestsSent);
+   obj["responsesSent"]            = json::Number(p.responsesSent);
+   obj["requestsRetransmitted"]    = json::Number(p.requestsRetransmitted);
+   obj["responsesRetransmitted"]   = json::Number(p.responsesRetransmitted);
+   obj["requestsReceived"]         = json::Number(p.requestsReceived);
+   obj["responsesReceived"]        = json::Number(p.responsesReceived);
+
+   // --- Sparse response-code histogram ---
+   obj["responsesByCode"] =
+      responseCodeMap(p.responsesByCode,
+                      resip::StatisticsMessage::Payload::MaxCode);
+
+   // --- Per-method counters (sparse, keyed by method name) ---
+   obj["requestsSentByMethod"]           = methodMap(p.requestsSentByMethod);
+   obj["requestsRetransmittedByMethod"]  = methodMap(p.requestsRetransmittedByMethod);
+   obj["requestsReceivedByMethod"]       = methodMap(p.requestsReceivedByMethod);
+   obj["responsesSentByMethod"]          = methodMap(p.responsesSentByMethod);
+   obj["responsesRetransmittedByMethod"] = methodMap(p.responsesRetransmittedByMethod);
+   obj["responsesReceivedByMethod"]      = methodMap(p.responsesReceivedByMethod);
+
+   // --- Per-method per-code response histograms (2-level sparse) ---
+   obj["responsesSentByMethodByCode"]          = methodCodeMap(p.responsesSentByMethodByCode);
+   obj["responsesRetransmittedByMethodByCode"] = methodCodeMap(p.responsesRetransmittedByMethodByCode);
+   obj["responsesReceivedByMethodByCode"]      = methodCodeMap(p.responsesReceivedByMethodByCode);
+
+   return obj;
+}
+}
+
 
 RestAdmin::RestAdmin(WebAdmin& webAdmin)
    : mWebAdmin(webAdmin)
@@ -276,9 +413,13 @@ RestAdmin::dispatch(const Data& method,
    {
       handleSettings(method, pageNumber);
    }
-   else if (resource == "stats")
+   else if (resource == "stackinfo")
    {
       handleStackInfo(method, pageNumber);
+   }
+   else if (resource == "stats")
+   {
+      handleStats(method, path, pageNumber);
    }
    else if (resource == "congestion")
    {
@@ -997,7 +1138,7 @@ RestAdmin::handleFilters(const Data& method,
 }
 
 // ---------------------------------------------------------------------------
-// Settings / stats / congestion
+// Settings / stack info / stack statistics / congestion
 // ---------------------------------------------------------------------------
 void
 RestAdmin::handleSettings(const Data& method, int pageNumber)
@@ -1033,6 +1174,81 @@ RestAdmin::handleStackInfo(const Data& method, int pageNumber)
       strm.flush();
    }
    sendJson(pageNumber, 200, successEnvelope(json::String(buffer.c_str())));
+}
+
+void
+RestAdmin::handleStats(const Data& method,
+                       const std::vector<Data>& path,
+                       int pageNumber)
+{
+   // POST /api/v1/stats/reset -> zero out the stack's statistics counters.
+   if (method == "POST" && path.size() == 2 && path[1] == "reset")
+   {
+      mWebAdmin.mProxy.getStack().zeroOutStatistics();
+      sendOk(pageNumber);
+      return;
+   }
+
+   // GET /api/v1/stats -> fresh stack statistics from the StatisticsManager.
+   // This is async: pollStatistics() asks the stack to deliver a message, and
+   // we wait (with a timeout) for ReproRunner to route that message to
+   // WebAdmin::handleStatisticsMessage, which populates mStatsPayload.
+   if (method == "GET" && path.size() == 1)
+   {
+      StatisticsMessage::Payload payload;
+      bool gotPayload = false;
+
+      {
+         Lock lock(mWebAdmin.mStatsMutex);
+
+         // Clear any previous payload so we wait for *this* request's poll.
+         mWebAdmin.mStatsReady = false;
+
+         if (!mWebAdmin.mProxy.getStack().pollStatistics())
+         {
+            sendError(pageNumber, 503,
+                      "Statistics Manager is not enabled "
+                      "(set StatisticsLogInterval in repro.config)");
+            return;
+         }
+
+         // Wait up to 10 seconds for the stats message to arrive. Loop to
+         // handle spurious wakeups; exit when either mStatsReady becomes
+         // true or the deadline passes.
+         const std::chrono::steady_clock::time_point deadline =
+            std::chrono::steady_clock::now() + std::chrono::seconds(10);
+         while (!mWebAdmin.mStatsReady)
+         {
+            std::chrono::steady_clock::duration remaining =
+               deadline - std::chrono::steady_clock::now();
+            if (remaining <= std::chrono::steady_clock::duration::zero())
+            {
+               break;
+            }
+            mWebAdmin.mStatsCondition.wait_for(lock, remaining);
+         }
+
+         if (mWebAdmin.mStatsReady)
+         {
+            // Copy the payload under the lock, then serialize to JSON
+            // outside the critical section.
+            payload = mWebAdmin.mStatsPayload;
+            gotPayload = true;
+         }
+      }
+
+      if (!gotPayload)
+      {
+         sendError(pageNumber, 504,
+                   "Timed out waiting for stack statistics");
+         return;
+      }
+
+      sendJson(pageNumber, 200, successEnvelope(payloadToJson(payload)));
+      return;
+   }
+
+   sendMethodNotAllowed(pageNumber, method);
 }
 
 void

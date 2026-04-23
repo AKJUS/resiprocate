@@ -184,6 +184,12 @@ HttpConnection::setPage(const Data& pPage,int response,const Mime& pType)
       }
       break;
 
+      case 504:
+      {
+         mTxBuffer += "HTTP/1.0 504 Gateway Timeout" ; mTxBuffer += Symbols::CRLF;
+      }
+      break;
+
       default:
       {
          resip_assert(0);  
