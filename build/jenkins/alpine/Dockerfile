@@ -1,4 +1,4 @@
-FROM alpine:3.12 AS build-env
+FROM alpine:3.21.3 AS build-env
 
 RUN apk add --no-cache abi-compliance-checker \
                        asio-dev \
